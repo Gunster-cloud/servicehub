@@ -2,13 +2,14 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from servicehub.apps.clients.models import Client
+from servicehub.utils.models import SoftDeleteModel, AuditModel
 
 User = get_user_model()
 
 
-class Quote(models.Model):
+class Quote(SoftDeleteModel, AuditModel):
     """
-    Quote/Budget model for ServiceHub.
+    Quote/Budget model for ServiceHub with soft delete and audit trail.
     """
     
     STATUS_CHOICES = (
@@ -21,7 +22,7 @@ class Quote(models.Model):
     )
     
     # Basic Information
-    quote_number = models.CharField(_('número do orçamento'), max_length=50, unique=True)
+    quote_number = models.CharField(_('número do orçamento'), max_length=50, unique=True, blank=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='quotes')
     title = models.CharField(_('título'), max_length=255)
     description = models.TextField(_('descrição'))
@@ -43,10 +44,6 @@ class Quote(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='quotes_created')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='quotes_assigned')
     
-    # Timestamps
-    created_at = models.DateTimeField(_('criado em'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('atualizado em'), auto_now=True)
-    
     class Meta:
         verbose_name = _('Orçamento')
         verbose_name_plural = _('Orçamentos')
@@ -55,13 +52,14 @@ class Quote(models.Model):
             models.Index(fields=['quote_number']),
             models.Index(fields=['status']),
             models.Index(fields=['client']),
+            models.Index(fields=['deleted_at']),
         ]
     
     def __str__(self):
         return f"{self.quote_number} - {self.client.name}"
 
 
-class QuoteItem(models.Model):
+class QuoteItem(AuditModel):
     """
     Line items for a quote.
     """
@@ -72,8 +70,6 @@ class QuoteItem(models.Model):
     unit_price = models.DecimalField(_('preço unitário'), max_digits=10, decimal_places=2)
     total = models.DecimalField(_('total'), max_digits=10, decimal_places=2)
     order = models.PositiveIntegerField(_('ordem'), default=0)
-    created_at = models.DateTimeField(_('criado em'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('atualizado em'), auto_now=True)
     
     class Meta:
         verbose_name = _('Item do Orçamento')
@@ -84,9 +80,9 @@ class QuoteItem(models.Model):
         return f"{self.description} - {self.quote.quote_number}"
 
 
-class Proposal(models.Model):
+class Proposal(SoftDeleteModel, AuditModel):
     """
-    Proposal model (evolved from Quote).
+    Proposal model (evolved from Quote) with soft delete and audit trail.
     """
     
     STATUS_CHOICES = (
@@ -99,7 +95,7 @@ class Proposal(models.Model):
     )
     
     quote = models.OneToOneField(Quote, on_delete=models.CASCADE, related_name='proposal')
-    proposal_number = models.CharField(_('número da proposta'), max_length=50, unique=True)
+    proposal_number = models.CharField(_('número da proposta'), max_length=50, unique=True, blank=True)
     status = models.CharField(_('status'), max_length=20, choices=STATUS_CHOICES, default='draft')
     
     # Terms and Conditions
@@ -111,14 +107,15 @@ class Proposal(models.Model):
     sent_at = models.DateTimeField(_('enviado em'), null=True, blank=True)
     accepted_at = models.DateTimeField(_('aceito em'), null=True, blank=True)
     
-    # Timestamps
-    created_at = models.DateTimeField(_('criado em'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('atualizado em'), auto_now=True)
-    
     class Meta:
         verbose_name = _('Proposta')
         verbose_name_plural = _('Propostas')
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['proposal_number']),
+            models.Index(fields=['status']),
+            models.Index(fields=['deleted_at']),
+        ]
     
     def __str__(self):
         return f"{self.proposal_number} - {self.quote.client.name}"

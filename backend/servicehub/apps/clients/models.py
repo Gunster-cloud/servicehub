@@ -1,13 +1,14 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
+from servicehub.utils.models import SoftDeleteModel, AuditModel
 
 User = get_user_model()
 
 
-class Client(models.Model):
+class Client(SoftDeleteModel, AuditModel):
     """
-    Client model for ServiceHub.
+    Client model for ServiceHub with soft delete and audit trail.
     """
     
     TYPE_CHOICES = (
@@ -47,8 +48,6 @@ class Client(models.Model):
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_clients')
     
     # Timestamps
-    created_at = models.DateTimeField(_('criado em'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('atualizado em'), auto_now=True)
     last_contact = models.DateTimeField(_('último contato'), null=True, blank=True)
     
     class Meta:
@@ -59,13 +58,14 @@ class Client(models.Model):
             models.Index(fields=['email']),
             models.Index(fields=['document']),
             models.Index(fields=['status']),
+            models.Index(fields=['deleted_at']),
         ]
     
     def __str__(self):
         return f"{self.name} ({self.email})"
 
 
-class ClientContact(models.Model):
+class ClientContact(AuditModel):
     """
     Additional contacts for a client.
     """
@@ -76,8 +76,6 @@ class ClientContact(models.Model):
     phone = models.CharField(_('telefone'), max_length=20, blank=True)
     position = models.CharField(_('cargo'), max_length=100, blank=True)
     is_primary = models.BooleanField(_('contato principal'), default=False)
-    created_at = models.DateTimeField(_('criado em'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('atualizado em'), auto_now=True)
     
     class Meta:
         verbose_name = _('Contato do Cliente')
