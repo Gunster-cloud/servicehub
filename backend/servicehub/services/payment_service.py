@@ -199,6 +199,15 @@ class PaymentService:
             return StripePaymentService.create_payment_intent(amount, **kwargs)
         elif method == 'paypal':
             return PayPalPaymentService.create_payment(amount, **kwargs)
+        elif method == 'mercadopago':
+            from servicehub.services.mercadopago_service import MercadoPagoService
+            mp = MercadoPagoService()
+            items = kwargs.get('items', [{
+                'title': kwargs.get('description', 'Pagamento'),
+                'quantity': 1,
+                'unit_price': amount,
+            }])
+            return mp.create_preference(items, **kwargs)
         else:
             logger.error(f'Unknown payment method: {method}')
             return None
@@ -210,6 +219,11 @@ class PaymentService:
             return StripePaymentService.confirm_payment(payment_id)
         elif method == 'paypal':
             return PayPalPaymentService.execute_payment(payment_id, None)
+        elif method == 'mercadopago':
+            from servicehub.services.mercadopago_service import MercadoPagoService
+            mp = MercadoPagoService()
+            payment = mp.get_payment(payment_id)
+            return payment and payment.get('status') == 'approved'
         else:
             logger.error(f'Unknown payment method: {method}')
             return False
@@ -221,6 +235,10 @@ class PaymentService:
             return StripePaymentService.refund_payment(payment_id, amount)
         elif method == 'paypal':
             return PayPalPaymentService.refund_payment(payment_id, amount)
+        elif method == 'mercadopago':
+            from servicehub.services.mercadopago_service import MercadoPagoService
+            mp = MercadoPagoService()
+            return mp.refund_payment(payment_id, amount)
         else:
             logger.error(f'Unknown payment method: {method}')
             return None
