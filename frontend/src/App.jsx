@@ -12,6 +12,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Clients from './pages/Clients';
+import Quotes from './pages/Quotes';
+import Services from './pages/Services';
 
 // Create theme
 const theme = createTheme({
@@ -44,6 +47,30 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clients"
+              element={
+                <ProtectedRoute>
+                  <Clients />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/quotes"
+              element={
+                <ProtectedRoute>
+                  <Quotes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/services"
+              element={
+                <ProtectedRoute>
+                  <Services />
                 </ProtectedRoute>
               }
             />
