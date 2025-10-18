@@ -50,4 +50,16 @@ pytest-xdist==3.5.0
 # Production
 gunicorn==21.2.0
 whitenoise==6.6.0
+django-celery-beat==2.5.0
+django-celery-results==2.5.1
+
+# Email
+django-anymail==10.0
+
+# Storage (AWS S3 support)
+boto3==1.29.7
+django-storages==1.14.2
+
+# Monitoring
+sentry-sdk==1.38.0
 
