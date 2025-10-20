@@ -54,7 +54,7 @@ class Quote(SoftDeleteModel, AuditModel):
             models.Index(fields=['client']),
             models.Index(fields=['deleted_at']),
         ]
-    
+
     def __str__(self):
         return f"{self.quote_number} - {self.client.name}"
 
