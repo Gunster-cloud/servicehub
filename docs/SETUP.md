@@ -40,11 +40,13 @@ Este comando irá:
 - Criar e iniciar o Nginx
 
 > **Dica:** o Redis já é publicado em uma porta aleatória por padrão para evitar conflitos com
+
 > instalações locais (veja com `docker compose port redis 6379`) e o Nginx agora usa as portas
 > 8080/8443 por padrão para não disputar com serviços do host que já estejam nas portas 80/443.
 > Se preferir controlar as portas manualmente ou se outro serviço (PostgreSQL 5432, backend 8000,
 > frontend 3000) estiver em uso na sua máquina, crie um arquivo `.env` na raiz do projeto e defina as
 > variáveis abaixo com as portas desejadas:
+
 >
 > ```env
 > POSTGRES_HOST_PORT=55432
