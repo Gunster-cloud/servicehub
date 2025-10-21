@@ -97,6 +97,7 @@ servicehub/
    > do projeto **antes** de executar o Docker Compose. Os serviços serão expostos usando esses
    > valores.
 
+
 4. **Execute as migrações**
    ```bash
    docker compose exec backend python manage.py migrate

@@ -44,6 +44,7 @@ Este comando irá:
 > portas manualmente ou se outro serviço (PostgreSQL 5432, backend 8000, frontend 3000, Nginx
 > 80/443) estiver em uso na sua máquina, crie um arquivo `.env` na raiz do projeto e defina as
 > variáveis abaixo com as portas desejadas:
+
 >
 > ```env
 > POSTGRES_HOST_PORT=55432
