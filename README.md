@@ -91,13 +91,16 @@ servicehub/
    ```
 
    > **Dica:** o Redis agora é publicado em uma porta aleatória por padrão para evitar conflitos
-
+7
+   > com instalações locais e o Nginx usa as portas 8080/8443 por padrão para não disputar as
+   > portas 80/443 do host. Execute `docker compose port redis 6379` para descobrir a porta ou
+7
    > defina variáveis como `REDIS_HOST_PORT`, `POSTGRES_HOST_PORT`, `BACKEND_HOST_PORT`,
    > `FRONTEND_HOST_PORT`, `NGINX_HTTP_PORT` ou `NGINX_HTTPS_PORT` em um arquivo `.env` na raiz
    > do projeto **antes** de executar o Docker Compose. Os serviços serão expostos usando esses
    > valores.
 
-
+7
 4. **Execute as migrações**
    ```bash
    docker compose exec backend python manage.py migrate
