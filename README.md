@@ -87,17 +87,24 @@ servicehub/
 
 3. **Inicie os serviços com Docker Compose**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
+
+   > **Dica:** o Redis agora é publicado em uma porta aleatória por padrão para evitar conflitos
+   > com instalações locais. Execute `docker compose port redis 6379` para descobrir a porta ou
+   > defina variáveis como `REDIS_HOST_PORT`, `POSTGRES_HOST_PORT`, `BACKEND_HOST_PORT`,
+   > `FRONTEND_HOST_PORT`, `NGINX_HTTP_PORT` ou `NGINX_HTTPS_PORT` em um arquivo `.env` na raiz
+   > do projeto **antes** de executar o Docker Compose. Os serviços serão expostos usando esses
+   > valores.
 
 4. **Execute as migrações**
    ```bash
-   docker-compose exec backend python manage.py migrate
+   docker compose exec backend python manage.py migrate
    ```
 
 5. **Crie um superusuário**
    ```bash
-   docker-compose exec backend python manage.py createsuperuser
+   docker compose exec backend python manage.py createsuperuser
    ```
 
 6. **Acesse a aplicação**
