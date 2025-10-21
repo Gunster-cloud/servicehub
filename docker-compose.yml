@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: servicehub
       POSTGRES_PASSWORD: servicehub
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     image: redis:7-alpine
     container_name: servicehub_redis
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -56,7 +56,7 @@ services:
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
     ports:
-      - "8000:8000"
+      - "${BACKEND_HOST_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,8 +102,8 @@ services:
     image: nginx:alpine
     container_name: servicehub_nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./backend/staticfiles:/app/staticfiles:ro

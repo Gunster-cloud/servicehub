@@ -47,7 +47,6 @@ paypalrestsdk==1.7.1
 # Mercado Pago 2.3.0 is the latest release that provides wheels for Python 3.11.
 mercadopago==2.3.0
 
-
 # SMS & WhatsApp
 twilio==8.10.0
 
