@@ -2,14 +2,20 @@
 Django==5.0.1
 djangorestframework==3.14.0
 django-cors-headers==4.3.1
-django-environ==0.11.2
+
 django-filter==24.1
 django-extensions==3.2.3
 
 # Authentication & Security
 
+# Django Environ 0.11.2 is the most recent release that supports Python 3.11.
+django-environ==0.11.2
+# Simple JWT 5.5.1 is the latest release that publishes wheels for Python 3.11.
 djangorestframework-simplejwt==5.5.1
-PyJWT==2.8.1
+# PyJWT 2.10.1 is the newest release compatible with Simple JWT and Python 3.11.
+PyJWT==2.10.1
+# Cryptography 41.x still ships manylinux wheels for Python 3.11 which keeps
+# container builds lightweight.
 
 cryptography==41.0.7
 
@@ -36,7 +42,7 @@ drf-spectacular==0.27.0
 # Payments
 stripe==7.8.0
 paypalrestsdk==1.7.1
-mercado-pago==2.0.0
+mercadopago==2.0.0
 
 # SMS & WhatsApp
 twilio==8.10.0
