@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from servicehub.apps.clients.models import Client
 from servicehub.utils.models import SoftDeleteModel, AuditModel
@@ -57,6 +58,22 @@ class Quote(SoftDeleteModel, AuditModel):
 
     def __str__(self):
         return f"{self.quote_number} - {self.client.name}"
+
+    @staticmethod
+    def _generate_quote_number():
+        """Return a unique quote identifier."""
+        timestamp = timezone.now().strftime('%Y%m%d%H%M%S%f')
+        return f"QT-{timestamp}"
+
+    def save(self, *args, **kwargs):
+        """Automatically populate the quote number when missing."""
+        if not self.quote_number:
+            # Guarantee uniqueness even if multiple objects are created quickly.
+            quote_number = self._generate_quote_number()
+            while Quote.objects.filter(quote_number=quote_number).exists():
+                quote_number = self._generate_quote_number()
+            self.quote_number = quote_number
+        super().save(*args, **kwargs)
 
 
 class QuoteItem(AuditModel):
