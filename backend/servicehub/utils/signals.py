@@ -1,25 +1,36 @@
-"""
-Django signals for ServiceHub.
-"""
+"""Django signals for ServiceHub."""
 
-import uuid
+from __future__ import annotations
+
+import secrets
 
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.utils import timezone
-from servicehub.apps.quotes.models import Quote, Proposal
+from servicehub.apps.quotes.models import Proposal, Quote
 from servicehub.apps.services.models import ServiceOrder
 
 
+IDENTIFIER_SUFFIX_LENGTH = 4
+MAX_IDENTIFIER_ATTEMPTS = 100
+
+
 def _generate_unique_identifier(model, field_name, prefix):
-    """Return a unique identifier with the legacy XXXX numeric suffix format."""
-    today = timezone.now().strftime('%Y%m%d')
-    for _ in range(100):
-        random_suffix = str(uuid.uuid4().int)[:4]
-        identifier = f"{prefix}-{today}-{random_suffix}"
-        if not model.objects.filter(**{field_name: identifier}).exists():
+    """Return a unique identifier using the legacy ``PREFIX-YYYYMMDD-XXXX`` format."""
+
+    today = timezone.now().strftime("%Y%m%d")
+    lookup_manager = getattr(model, "_default_manager", model.objects)
+
+    for _ in range(MAX_IDENTIFIER_ATTEMPTS):
+        random_suffix = secrets.randbelow(10**IDENTIFIER_SUFFIX_LENGTH)
+        identifier = f"{prefix}-{today}-{random_suffix:0{IDENTIFIER_SUFFIX_LENGTH}d}"
+        if not lookup_manager.filter(**{field_name: identifier}).exists():
             return identifier
-    raise RuntimeError("Unable to generate a unique identifier after 100 attempts")
+
+    raise RuntimeError(
+        "Unable to generate a unique identifier after "
+        f"{MAX_IDENTIFIER_ATTEMPTS} attempts"
+    )
 
 
 @receiver(pre_save, sender=Quote)
