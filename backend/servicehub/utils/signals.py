@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import secrets
 
+
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from servicehub.apps.quotes.models import Proposal, Quote
 from servicehub.apps.services.models import ServiceOrder
+
 
 
 IDENTIFIER_SUFFIX_LENGTH = 4
