@@ -87,17 +87,22 @@ servicehub/
 
 3. **Inicie os serviços com Docker Compose**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
+
+   > **Dica:** se houver conflitos de porta com serviços locais, defina variáveis como
+   > `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`, `BACKEND_HOST_PORT`, `FRONTEND_HOST_PORT`,
+   > `NGINX_HTTP_PORT` ou `NGINX_HTTPS_PORT` em um arquivo `.env` na raiz do projeto antes de
+   > executar o Docker Compose. Os serviços serão expostos usando esses valores.
 
 4. **Execute as migrações**
    ```bash
-   docker-compose exec backend python manage.py migrate
+   docker compose exec backend python manage.py migrate
    ```
 
 5. **Crie um superusuário**
    ```bash
-   docker-compose exec backend python manage.py createsuperuser
+   docker compose exec backend python manage.py createsuperuser
    ```
 
 6. **Acesse a aplicação**
