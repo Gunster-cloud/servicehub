@@ -40,9 +40,11 @@ Este comando irá:
 - Criar e iniciar o Nginx
 
 > **Dica:** o Redis já é publicado em uma porta aleatória por padrão para evitar conflitos com
-> instalações locais (veja com `docker compose port redis 6379`). Se preferir controlar as
-> portas manualmente ou se outro serviço (PostgreSQL 5432, backend 8000, frontend 3000, Nginx
-> 80/443) estiver em uso na sua máquina, crie um arquivo `.env` na raiz do projeto e defina as
+
+> instalações locais (veja com `docker compose port redis 6379`) e o Nginx agora usa as portas
+> 8080/8443 por padrão para não disputar com serviços do host que já estejam nas portas 80/443.
+> Se preferir controlar as portas manualmente ou se outro serviço (PostgreSQL 5432, backend 8000,
+> frontend 3000) estiver em uso na sua máquina, crie um arquivo `.env` na raiz do projeto e defina as
 > variáveis abaixo com as portas desejadas:
 
 >
@@ -70,6 +72,7 @@ docker compose ps
 - **Documentação Swagger**: http://localhost:8000/api/docs/
 - **Admin Django**: http://localhost:8000/admin/
 - **Frontend**: http://localhost:3000 (quando disponível)
+- **Nginx (proxy)**: http://localhost:8080
 
 ## Desenvolvimento Local (sem Docker)
 

@@ -91,7 +91,7 @@ servicehub/
    ```
 
    > **Dica:** o Redis agora é publicado em uma porta aleatória por padrão para evitar conflitos
-   > com instalações locais. Execute `docker compose port redis 6379` para descobrir a porta ou
+
    > defina variáveis como `REDIS_HOST_PORT`, `POSTGRES_HOST_PORT`, `BACKEND_HOST_PORT`,
    > `FRONTEND_HOST_PORT`, `NGINX_HTTP_PORT` ou `NGINX_HTTPS_PORT` em um arquivo `.env` na raiz
    > do projeto **antes** de executar o Docker Compose. Os serviços serão expostos usando esses
@@ -112,6 +112,7 @@ servicehub/
    - Frontend: http://localhost:3000
    - API: http://localhost:8000
    - Admin: http://localhost:8000/admin
+   - Nginx (proxy unificado): http://localhost:8080
 
 ## 📚 Documentação
 
