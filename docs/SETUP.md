@@ -39,9 +39,12 @@ Este comando irá:
 - Criar e iniciar o Celery Worker
 - Criar e iniciar o Nginx
 
-> **Dica:** se alguma porta (5432 para o PostgreSQL, 6379 para o Redis, 8000 para o backend,
-> 3000 para o frontend ou 80/443 para o Nginx) já estiver em uso na sua máquina, crie um
-> arquivo `.env` na raiz do projeto e defina as variáveis abaixo com as portas desejadas:
+> **Dica:** o Redis já é publicado em uma porta aleatória por padrão para evitar conflitos com
+> instalações locais (veja com `docker compose port redis 6379`). Se preferir controlar as
+> portas manualmente ou se outro serviço (PostgreSQL 5432, backend 8000, frontend 3000, Nginx
+> 80/443) estiver em uso na sua máquina, crie um arquivo `.env` na raiz do projeto e defina as
+> variáveis abaixo com as portas desejadas:
+
 >
 > ```env
 > POSTGRES_HOST_PORT=55432
