@@ -1,5 +1,6 @@
 # Django and REST Framework
-Django==5.0.1
+# Django 4.2.x is the current LTS release and remains compatible with our Celery stack.
+Django==4.2.11
 djangorestframework==3.14.0
 django-cors-headers==4.3.1
 
