@@ -166,11 +166,45 @@ servicehub/
    - Admin: http://localhost:8000/admin
    - Nginx (proxy unificado): http://localhost:8080
 
+## 🌐 Deploy em VPS
+
+Para instalar o ServiceHub em um servidor VPS (AlmaLinux 9, Ubuntu 22.04 LTS):
+
+### Instalação Automática
+```bash
+# AlmaLinux 9
+curl -fsSL https://raw.githubusercontent.com/seu-usuario/servicehub/main/deploy-almalinux.sh | bash -s "seu-dominio.com" "admin@seu-dominio.com"
+
+# Ubuntu 22.04 LTS
+curl -fsSL https://raw.githubusercontent.com/seu-usuario/servicehub/main/deploy-ubuntu.sh | bash -s "seu-dominio.com" "admin@seu-dominio.com"
+```
+
+### Configuração SSL
+```bash
+# Após a instalação, configure SSL com Let's Encrypt
+wget https://raw.githubusercontent.com/seu-usuario/servicehub/main/scripts/setup-ssl-production.sh
+chmod +x setup-ssl-production.sh
+./setup-ssl-production.sh
+```
+
+### Requisitos do Servidor
+- **Sistema**: AlmaLinux 9, Ubuntu 22.04 LTS ou similar
+- **RAM**: Mínimo 2GB (recomendado 4GB+)
+- **CPU**: Mínimo 2 cores
+- **Armazenamento**: Mínimo 20GB SSD
+- **Domínio**: Configurado apontando para o IP do servidor
+
+Para instruções detalhadas, consulte:
+- [Guia Completo de VPS](docs/VPS-INSTALLATION.md)
+- [Guia Rápido de VPS](docs/VPS-QUICK-START.md)
+
 ## 📚 Documentação
 
 - [API Documentation](docs/API.md)
 - [Architecture Guide](docs/ARCHITECTURE.md)
 - [Setup Guide](docs/SETUP.md)
+- [VPS Installation Guide](docs/VPS-INSTALLATION.md) - Guia completo para instalação em VPS
+- [VPS Quick Start](docs/VPS-QUICK-START.md) - Guia rápido para VPS
 
 ## 🔐 Segurança
 
