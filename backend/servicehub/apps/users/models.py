@@ -20,7 +20,7 @@ class User(AbstractUser):
     phone = models.CharField(_('telefone'), max_length=20, blank=True)
     role = models.CharField(_('função'), max_length=20, choices=ROLE_CHOICES, default='salesperson')
     company_name = models.CharField(_('nome da empresa'), max_length=255, blank=True)
-    document = models.CharField(_('CPF/CNPJ'), max_length=20, blank=True, unique=True, null=True)
+    document = models.CharField(_('CPF/CNPJ'), max_length=20, blank=True, null=True)
     is_active = models.BooleanField(_('ativo'), default=True)
     created_at = models.DateTimeField(_('criado em'), auto_now_add=True)
     updated_at = models.DateTimeField(_('atualizado em'), auto_now=True)

@@ -64,7 +64,7 @@ INSTALLED_APPS = [
     "django_celery_results",
 
     # Local apps
-    "servicehub.apps.ServicehubConfig",
+    "servicehub",
     "servicehub.apps.users",
     "servicehub.apps.clients",
     "servicehub.apps.quotes",

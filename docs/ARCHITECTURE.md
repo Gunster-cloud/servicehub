@@ -18,7 +18,7 @@ O backend é responsável por:
 - Cache (Redis)
 
 **Stack**:
-- Django 5.0
+- Django 4.2
 - Django REST Framework
 - PostgreSQL
 - Redis
@@ -38,8 +38,8 @@ O frontend é responsável por:
 - React 19
 - Vite
 - TanStack Query
-- Tailwind CSS
-- Shadcn/ui
+- Material-UI (MUI)
+- Emotion
 
 ### Infraestrutura
 

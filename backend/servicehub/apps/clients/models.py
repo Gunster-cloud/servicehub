@@ -58,7 +58,7 @@ class Client(SoftDeleteModel, AuditModel):
             models.Index(fields=['email']),
             models.Index(fields=['document']),
             models.Index(fields=['status']),
-            models.Index(fields=['deleted_at']),
+            models.Index(fields=['created_at']),
         ]
     
     def __str__(self):

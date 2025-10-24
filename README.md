@@ -5,7 +5,7 @@ Uma plataforma moderna e escalável para gestão de clientes, orçamentos, propo
 ## 🏗️ Arquitetura
 
 ### Backend
-- **Framework**: Django 5.0 + Django REST Framework
+- **Framework**: Django 4.2 + Django REST Framework
 - **Banco de Dados**: PostgreSQL
 - **Autenticação**: JWT (djangorestframework-simplejwt)
 - **Validação**: Serializers DRF + Pydantic
@@ -14,9 +14,9 @@ Uma plataforma moderna e escalável para gestão de clientes, orçamentos, propo
 
 ### Frontend
 - **Framework**: React 19 + Vite
-- **UI Components**: Shadcn/ui + Radix UI
+- **UI Components**: Material-UI (MUI) + Emotion
 - **State Management**: TanStack Query + Context API
-- **Styling**: Tailwind CSS
+- **Styling**: Material-UI + CSS
 - **Formulários**: React Hook Form + Zod
 
 ### Infraestrutura
@@ -25,20 +25,69 @@ Uma plataforma moderna e escalável para gestão de clientes, orçamentos, propo
 - **Logging**: Structured logging com JSON
 - **Monitoring**: Prometheus + Grafana (opcional)
 
+## 🚀 Início Rápido
+
+### Pré-requisitos
+- Docker Desktop instalado e rodando
+- Node.js 18+ (para desenvolvimento local)
+- Python 3.11+ (para desenvolvimento local)
+
+### Setup Automático
+
+**Windows:**
+```bash
+setup.bat
+```
+
+**Linux/Mac:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+### Setup Manual
+
+1. **Clone o repositório:**
+```bash
+git clone <repo-url>
+cd servicehub
+```
+
+2. **Configure as variáveis de ambiente:**
+```bash
+cp env.example .env
+```
+
+3. **Inicie os serviços:**
+```bash
+docker compose up -d
+```
+
+4. **Instale dependências do frontend (desenvolvimento):**
+```bash
+cd frontend
+npm install
+```
+
+### Acessos
+- **API**: http://localhost:8000
+- **Frontend**: http://localhost:3000
+- **Nginx**: http://localhost:8080
+- **Admin Django**: http://localhost:8000/admin/
+
 ## 📁 Estrutura do Projeto
 
 ```
 servicehub/
 ├── backend/
 │   ├── config/                 # Configurações Django
-│   ├── apps/
+│   ├── servicehub/apps/
 │   │   ├── users/             # Gerenciamento de usuários
 │   │   ├── clients/           # Gestão de clientes
 │   │   ├── quotes/            # Orçamentos e propostas
 │   │   ├── services/          # Serviços oferecidos
 │   │   └── analytics/         # Análise de dados
 │   ├── utils/                 # Funções utilitárias
-│   ├── migrations/            # Migrações do banco
 │   ├── manage.py
 │   ├── requirements.txt
 │   └── Dockerfile
@@ -48,7 +97,7 @@ servicehub/
 │   │   ├── pages/            # Páginas da aplicação
 │   │   ├── hooks/            # Custom hooks
 │   │   ├── services/         # Chamadas de API
-│   │   ├── store/            # Context e estado global
+│   │   ├── contexts/         # Context e estado global
 │   │   ├── types/            # Tipos TypeScript
 │   │   └── main.tsx
 │   ├── public/
