@@ -1,138 +1,138 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# ServiceHub Deploy Script for Ubuntu 22.04 LTS
-# This script sets up and deploys ServiceHub on a fresh Ubuntu 22.04 LTS VPS
+# Parâmetros (posicionais)
+DOMAIN="${1:-}"
+ADMIN_EMAIL="${2:-}"
+REPO_URL="${3:-https://github.com/seu-usuario/servicehub.git}"
+INSTALL_DIR="/opt/servicehub"
+NEWUSER="deploy"
+COMPOSE_PROJECT="servicehub"
 
-set -e
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Configuration
-DOMAIN=${1:-"your-domain.com"}
-EMAIL=${2:-"admin@your-domain.com"}
-PROJECT_DIR="/opt/servicehub"
-BACKUP_DIR="/opt/backups"
-
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}ServiceHub Deploy Script - Ubuntu 22.04${NC}"
-echo -e "${BLUE}========================================${NC}"
-echo
-
-# Function to print status
-print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Check if running as root
-if [[ $EUID -ne 0 ]]; then
-   print_error "Este script deve ser executado como root (sudo)"
-   exit 1
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Execute este script como root (sudo)."
+  exit 1
 fi
 
-# Update system
-print_status "Atualizando sistema..."
+export DEBIAN_FRONTEND=noninteractive
+
+echo "==> 1) Atualizando sistema e instalando dependências básicas..."
 apt update && apt upgrade -y
+apt install -y apt-transport-https ca-certificates curl gnupg lsb-release \
+  software-properties-common git ufw wget unzip
 
-# Install required packages
-print_status "Instalando dependências..."
-apt install -y \
-    curl \
-    wget \
-    git \
-    unzip \
-    htop \
-    nano \
-    ufw \
-    fail2ban \
-    software-properties-common \
-    apt-transport-https \
-    ca-certificates \
-    gnupg \
-    lsb-release
-
-# Install Docker
-print_status "Instalando Docker..."
-if ! command -v docker &> /dev/null; then
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sh get-docker.sh
-    apt install -y docker-compose-plugin
-    systemctl enable docker
-    systemctl start docker
-    usermod -aG docker $USER
-    rm get-docker.sh
-    print_status "Docker instalado com sucesso!"
+echo "==> 2) Criando usuário não-root '$NEWUSER' (se não existir)..."
+if id -u "$NEWUSER" >/dev/null 2>&1; then
+  echo "Usuário $NEWUSER já existe. Pulando criação."
 else
-    print_warning "Docker já está instalado"
+  adduser --disabled-password --gecos "" "$NEWUSER"
+  usermod -aG sudo "$NEWUSER"
+  echo "Usuário $NEWUSER criado e adicionado ao grupo sudo."
 fi
 
-# Install Node.js (for frontend builds)
-print_status "Instalando Node.js..."
-if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt install -y nodejs
-    print_status "Node.js instalado com sucesso!"
+echo "==> 3) Instalando Docker (oficial) e plugin docker compose..."
+if ! command -v docker >/dev/null 2>&1; then
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+    gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+  apt update
+  apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  systemctl enable --now docker
+  usermod -aG docker "$NEWUSER" || true
 else
-    print_warning "Node.js já está instalado"
+  echo "Docker já instalado. Pulando."
 fi
 
-# Configure firewall
-print_status "Configurando firewall..."
-ufw allow ssh
-ufw allow http
-ufw allow https
+echo "==> 4) Instalando Nginx, Certbot e fail2ban..."
+apt install -y nginx certbot python3-certbot-nginx fail2ban
+systemctl enable --now nginx
+systemctl enable --now fail2ban
+
+echo "==> 5) Configurando UFW (SSH, HTTP, HTTPS)..."
+ufw allow OpenSSH
+ufw allow 'Nginx Full' || true
 ufw --force enable
 
-# Configure fail2ban
-print_status "Configurando fail2ban..."
-systemctl enable fail2ban
-systemctl start fail2ban
-
-# Create project directory
-print_status "Criando diretórios do projeto..."
-mkdir -p $PROJECT_DIR
-mkdir -p $BACKUP_DIR
-mkdir -p /var/log/servicehub
-
-# Create servicehub user
-print_status "Criando usuário servicehub..."
-if ! id "servicehub" &>/dev/null; then
-    useradd -r -s /bin/bash -d $PROJECT_DIR servicehub
-    usermod -aG docker servicehub
-    chown -R servicehub:servicehub $PROJECT_DIR
-    chown -R servicehub:servicehub $BACKUP_DIR
+echo "==> 6) Clonando ou atualizando o repositório em $INSTALL_DIR..."
+if [ -d "$INSTALL_DIR/.git" ]; then
+  echo "Repositório já existe em $INSTALL_DIR — atualizando..."
+  git -C "$INSTALL_DIR" fetch --all --prune
+  git -C "$INSTALL_DIR" reset --hard origin/main || git -C "$INSTALL_DIR" pull || true
+else
+  git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
+  chown -R "$NEWUSER":"$NEWUSER" "$INSTALL_DIR"
 fi
 
-# Clone repository (if not already present)
-if [ ! -d "$PROJECT_DIR/.git" ]; then
-    print_status "Clonando repositório..."
-    cd $PROJECT_DIR
-    # You'll need to replace this with your actual repository URL
-    # git clone https://github.com/yourusername/servicehub.git .
-    print_warning "Por favor, clone o repositório manualmente em $PROJECT_DIR"
+# Detecta docker compose file path (raiz)
+COMPOSE_FILES=("$INSTALL_DIR/docker-compose.yml" "$INSTALL_DIR/docker-compose.yaml")
+COMPOSE_FILE=""
+for f in "${COMPOSE_FILES[@]}"; do
+  if [ -f "$f" ]; then
+    COMPOSE_FILE="$f"
+    break
+  fi
+done
+
+if [ -z "$COMPOSE_FILE" ]; then
+  echo "Aviso: docker-compose.yml não encontrado em $INSTALL_DIR. Verifique o repositório."
+else
+  echo "==> 7) Subindo containers com Docker Compose..."
+  (cd "$INSTALL_DIR" && docker compose up -d --remove-orphans)
+
+  echo "==> 8) Executando migrações Django (se o serviço 'backend' existir)..."
+  # tenta executar migrate com retries (aguarda DB subir)
+  if (cd "$INSTALL_DIR" && docker compose ps | grep -q 'backend'); then
+    ATTEMPTS=0
+    until [ "$ATTEMPTS" -ge 12 ]; do
+      if (cd "$INSTALL_DIR" && docker compose exec -T backend python manage.py migrate) ; then
+        echo "Migrações aplicadas com sucesso."
+        break
+      fi
+      ATTEMPTS=$((ATTEMPTS+1))
+      echo "Tentativa $ATTEMPTS/12: backend ainda não pronto. Aguardando 5s..."
+      sleep 5
+    done
+    if [ "$ATTEMPTS" -ge 12 ]; then
+      echo "Migrações falharam após várias tentativas. Verifique 'docker compose logs backend'."
+    fi
+  else
+    echo "Serviço 'backend' não detectado no docker-compose. Pulei migrações."
+  fi
 fi
 
-# Set up environment file
-print_status "Configurando arquivo de ambiente..."
-if [ ! -f "$PROJECT_DIR/.env" ]; then
-    cp $PROJECT_DIR/env.prod.example $PROJECT_DIR/.env
-    print_warning "Arquivo .env criado. Por favor, configure as variáveis necessárias:"
-    print_warning "- SECRET_KEY"
-    print_warning "- ALLOWED_HOSTS"
-    print_warning "- DB_PASSWORD"
-    print_warning "- Email settings"
+if [ -n "$DOMAIN" ]; then
+  echo "==> 9) Tentando emitir certificado Let's Encrypt para $DOMAIN..."
+  if command -v certbot >/dev/null 2>&1; then
+    if [ -n "$ADMIN_EMAIL" ]; then
+      certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$ADMIN_EMAIL" || \
+        echo "Certbot falhou — verifique DNS, Nginx config e logs."
+    else
+      certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email || \
+        echo "Certbot falhou — verifique DNS, Nginx config e logs."
+    fi
+    systemctl reload nginx || true
+  else
+    echo "Certbot não encontrado. Pulei tentativa de emitir certificado."
+  fi
+else
+  echo "Nenhum domínio informado — pulei tentativa de emitir TLS."
+fi
+
+echo "==> 10) Permissões e resumo final..."
+chown -R "$NEWUSER":"$NEWUSER" "$INSTALL_DIR" || true
+
+echo
+echo "Instalação concluída."
+echo "Diretório de instalação: $INSTALL_DIR"
+echo "Usuário criado/uso: $NEWUSER"
+if [ -n "$DOMAIN" ]; then
+  echo "Se o certificado foi emitido, o site está protegido por TLS."
+else
+  echo "Execute o script novamente com um domínio para emitir TLS via Let's Encrypt."
+fi
+echo "Verifique os logs dos serviços com: (cd $INSTALL_DIR && docker compose logs -f)"
     print_warning "- External services API keys"
 fi
 
