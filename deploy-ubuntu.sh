@@ -1,39 +1,89 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
-# Parâmetros (posicionais)
-DOMAIN="${1:-}"
-ADMIN_EMAIL="${2:-}"
-REPO_URL="${3:-https://github.com/seu-usuario/servicehub.git}"
-INSTALL_DIR="/opt/servicehub"
-NEWUSER="deploy"
-COMPOSE_PROJECT="servicehub"
+# Simple VPS deploy script for Ubuntu 20.04/22.04
+# Usage: ./deploy-ubuntu.sh    (interactive prompts)
+#        ./deploy-ubuntu.sh --user USER --ssh-key "ssh-..." --domain example.com
+
+print_usage() {
+  cat <<EOF
+Usage: $0 [--user USER] [--ssh-key "PUBKEY"] [--domain DOMAIN] [--help]
+Interactive prompts are used when options are omitted.
+EOF
+}
+
+# parse optional args
+USER_ARG=""
+SSH_KEY_ARG=""
+DOMAIN_ARG=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --user) USER_ARG="$2"; shift 2;;
+    --ssh-key) SSH_KEY_ARG="$2"; shift 2;;
+    --domain) DOMAIN_ARG="$2"; shift 2;;
+    -h|--help) print_usage; exit 0;;
+    *) echo "Unknown arg: $1"; print_usage; exit 2;;
+  esac
+done
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Execute este script como root (sudo)."
+  echo "Execute este script como root ou via sudo."
   exit 1
+fi
+
+read -rp "Nome do novo usuário (ex: deploy) [${USER_ARG:-deploy}]: " NEWUSER
+NEWUSER=${NEWUSER:-${USER_ARG:-deploy}}
+
+if [ -z "$SSH_KEY_ARG" ]; then
+  read -rp "Chave pública SSH para o usuário (cole ou deixe em branco para pular): " SSH_KEY
+else
+  SSH_KEY="$SSH_KEY_ARG"
+fi
+
+if [ -z "$DOMAIN_ARG" ]; then
+  read -rp "Domínio para TLS (ex: example.com) — deixe em branco para pular: " DOMAIN
+else
+  DOMAIN="$DOMAIN_ARG"
 fi
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "==> 1) Atualizando sistema e instalando dependências básicas..."
+echo "1) Atualizando sistema e instalando dependências..."
 apt update && apt upgrade -y
 apt install -y apt-transport-https ca-certificates curl gnupg lsb-release \
-  software-properties-common git ufw wget unzip
+    software-properties-common ufw git wget unzip
 
-echo "==> 2) Criando usuário não-root '$NEWUSER' (se não existir)..."
+echo "2) Criando usuário '$NEWUSER'..."
 if id -u "$NEWUSER" >/dev/null 2>&1; then
-  echo "Usuário $NEWUSER já existe. Pulando criação."
+  echo "Usuário já existe, pulando criação."
 else
-  adduser --disabled-password --gecos "" "$NEWUSER"
+  adduser --gecos "" "$NEWUSER"
   usermod -aG sudo "$NEWUSER"
-  echo "Usuário $NEWUSER criado e adicionado ao grupo sudo."
 fi
 
-echo "==> 3) Instalando Docker (oficial) e plugin docker compose..."
+if [ -n "$SSH_KEY" ]; then
+  su - "$NEWUSER" -c "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
+  echo "$SSH_KEY" > /home/"$NEWUSER"/.ssh/authorized_keys
+  chown "$NEWUSER":"$NEWUSER" /home/"$NEWUSER"/.ssh/authorized_keys
+  chmod 600 /home/"$NEWUSER"/.ssh/authorized_keys
+  echo "Chave SSH instalada para $NEWUSER."
+fi
+
+echo "3) Configurando UFW (SSH, HTTP, HTTPS)..."
+ufw allow OpenSSH
+# try to allow Nginx profile; if profile missing, open common ports
+if ufw app list | grep -q "Nginx Full"; then
+  ufw allow 'Nginx Full'
+else
+  ufw allow 80/tcp
+  ufw allow 443/tcp
+fi
+ufw --force enable
+
+echo "4) Instalando Docker..."
 if ! command -v docker >/dev/null 2>&1; then
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-    gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
   echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
     $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
@@ -42,87 +92,37 @@ if ! command -v docker >/dev/null 2>&1; then
   systemctl enable --now docker
   usermod -aG docker "$NEWUSER" || true
 else
-  echo "Docker já instalado. Pulando."
+  echo "Docker já instalado, pulando."
 fi
 
-echo "==> 4) Instalando Nginx, Certbot e fail2ban..."
+echo "5) Instalando Nginx, Certbot e fail2ban..."
 apt install -y nginx certbot python3-certbot-nginx fail2ban
 systemctl enable --now nginx
 systemctl enable --now fail2ban
 
-echo "==> 5) Configurando UFW (SSH, HTTP, HTTPS)..."
-ufw allow OpenSSH
-ufw allow 'Nginx Full' || true
-ufw --force enable
-
-echo "==> 6) Clonando ou atualizando o repositório em $INSTALL_DIR..."
-if [ -d "$INSTALL_DIR/.git" ]; then
-  echo "Repositório já existe em $INSTALL_DIR — atualizando..."
-  git -C "$INSTALL_DIR" fetch --all --prune
-  git -C "$INSTALL_DIR" reset --hard origin/main || git -C "$INSTALL_DIR" pull || true
-else
-  git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
-  chown -R "$NEWUSER":"$NEWUSER" "$INSTALL_DIR"
-fi
-
-# Detecta docker compose file path (raiz)
-COMPOSE_FILES=("$INSTALL_DIR/docker-compose.yml" "$INSTALL_DIR/docker-compose.yaml")
-COMPOSE_FILE=""
-for f in "${COMPOSE_FILES[@]}"; do
-  if [ -f "$f" ]; then
-    COMPOSE_FILE="$f"
-    break
-  fi
-done
-
-if [ -z "$COMPOSE_FILE" ]; then
-  echo "Aviso: docker-compose.yml não encontrado em $INSTALL_DIR. Verifique o repositório."
-else
-  echo "==> 7) Subindo containers com Docker Compose..."
-  (cd "$INSTALL_DIR" && docker compose up -d --remove-orphans)
-
-  echo "==> 8) Executando migrações Django (se o serviço 'backend' existir)..."
-  # tenta executar migrate com retries (aguarda DB subir)
-  if (cd "$INSTALL_DIR" && docker compose ps | grep -q 'backend'); then
-    ATTEMPTS=0
-    until [ "$ATTEMPTS" -ge 12 ]; do
-      if (cd "$INSTALL_DIR" && docker compose exec -T backend python manage.py migrate) ; then
-        echo "Migrações aplicadas com sucesso."
-        break
-      fi
-      ATTEMPTS=$((ATTEMPTS+1))
-      echo "Tentativa $ATTEMPTS/12: backend ainda não pronto. Aguardando 5s..."
-      sleep 5
-    done
-    if [ "$ATTEMPTS" -ge 12 ]; then
-      echo "Migrações falharam após várias tentativas. Verifique 'docker compose logs backend'."
-    fi
-  else
-    echo "Serviço 'backend' não detectado no docker-compose. Pulei migrações."
-  fi
-fi
-
-if [ -n "$DOMAIN" ]; then
-  echo "==> 9) Tentando emitir certificado Let's Encrypt para $DOMAIN..."
-  if command -v certbot >/dev/null 2>&1; then
-    if [ -n "$ADMIN_EMAIL" ]; then
-      certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$ADMIN_EMAIL" || \
-        echo "Certbot falhou — verifique DNS, Nginx config e logs."
+if [ -n "${DOMAIN:-}" ]; then
+  echo "Tentando obter certificado TLS para $DOMAIN..."
+  if systemctl is-active --quiet nginx; then
+    if certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m admin@"$DOMAIN"; then
+      echo "Certificado emitido para $DOMAIN."
     else
-      certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email || \
-        echo "Certbot falhou — verifique DNS, Nginx config e logs."
+      echo "Certbot falhou — verifique DNS e logs. Você pode rodar certbot manualmente."
     fi
-    systemctl reload nginx || true
   else
-    echo "Certbot não encontrado. Pulei tentativa de emitir certificado."
+    echo "Nginx não está ativo. Certbot precisa do Nginx rodando para o modo --nginx."
   fi
-else
-  echo "Nenhum domínio informado — pulei tentativa de emitir TLS."
 fi
 
-echo "==> 10) Permissões e resumo final..."
-chown -R "$NEWUSER":"$NEWUSER" "$INSTALL_DIR" || true
-
+echo "6) Limpeza e resumo..."
+apt autoremove -y
+echo
+echo "Instalação concluída."
+echo "Usuário criado: $NEWUSER"
+echo "Lembre-se: faça login com 'ssh $NEWUSER@<IP>' e, se necessário, reinicie para aplicar grupos."
+echo "Docker disponível (usuário $NEWUSER adicionado ao grupo 'docker')."
+if [ -n "${DOMAIN:-}" ]; then
+  echo "Se o certificado foi emitido, Nginx já foi configurado para usar TLS."
+fi
 echo
 echo "Instalação concluída."
 echo "Diretório de instalação: $INSTALL_DIR"
