@@ -2,13 +2,12 @@
 set -euo pipefail
 
 # Simple VPS deploy script for Ubuntu 20.04/22.04
-# Usage: ./deploy-ubuntu.sh    (interactive prompts)
-#        ./deploy-ubuntu.sh --user USER --ssh-key "ssh-..." --domain example.com
+# Usage: ./deploy-ubuntu.sh [--user USER] [--ssh-key "PUBKEY"] [--domain DOMAIN]
 
 print_usage() {
   cat <<EOF
 Usage: $0 [--user USER] [--ssh-key "PUBKEY"] [--domain DOMAIN] [--help]
-Interactive prompts are used when options are omitted.
+If an option is omitted the script will prompt interactively.
 EOF
 }
 
@@ -32,19 +31,20 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
+# Interactive prompts (use provided args as defaults)
 read -rp "Nome do novo usuário (ex: deploy) [${USER_ARG:-deploy}]: " NEWUSER
 NEWUSER=${NEWUSER:-${USER_ARG:-deploy}}
 
-if [ -z "$SSH_KEY_ARG" ]; then
-  read -rp "Chave pública SSH para o usuário (cole ou deixe em branco para pular): " SSH_KEY
-else
+if [ -n "$SSH_KEY_ARG" ]; then
   SSH_KEY="$SSH_KEY_ARG"
+else
+  read -rp "Chave pública SSH para o usuário (cole ou deixe em branco para pular): " SSH_KEY
 fi
 
-if [ -z "$DOMAIN_ARG" ]; then
-  read -rp "Domínio para TLS (ex: example.com) — deixe em branco para pular: " DOMAIN
-else
+if [ -n "$DOMAIN_ARG" ]; then
   DOMAIN="$DOMAIN_ARG"
+else
+  read -rp "Domínio para TLS (ex: example.com) — deixe em branco para pular: " DOMAIN
 fi
 
 export DEBIAN_FRONTEND=noninteractive
@@ -62,7 +62,7 @@ else
   usermod -aG sudo "$NEWUSER"
 fi
 
-if [ -n "$SSH_KEY" ]; then
+if [ -n "${SSH_KEY:-}" ]; then
   su - "$NEWUSER" -c "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
   echo "$SSH_KEY" > /home/"$NEWUSER"/.ssh/authorized_keys
   chown "$NEWUSER":"$NEWUSER" /home/"$NEWUSER"/.ssh/authorized_keys
@@ -71,13 +71,13 @@ if [ -n "$SSH_KEY" ]; then
 fi
 
 echo "3) Configurando UFW (SSH, HTTP, HTTPS)..."
-ufw allow OpenSSH
+ufw allow OpenSSH || true
 # try to allow Nginx profile; if profile missing, open common ports
-if ufw app list | grep -q "Nginx Full"; then
-  ufw allow 'Nginx Full'
+if ufw app list 2>/dev/null | grep -q "Nginx Full"; then
+  ufw allow 'Nginx Full' || true
 else
-  ufw allow 80/tcp
-  ufw allow 443/tcp
+  ufw allow 80/tcp || true
+  ufw allow 443/tcp || true
 fi
 ufw --force enable
 
@@ -102,6 +102,7 @@ systemctl enable --now fail2ban
 
 if [ -n "${DOMAIN:-}" ]; then
   echo "Tentando obter certificado TLS para $DOMAIN..."
+  # Certbot requires domain DNS pointing to this server and Nginx running.
   if systemctl is-active --quiet nginx; then
     if certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m admin@"$DOMAIN"; then
       echo "Certificado emitido para $DOMAIN."
@@ -115,6 +116,7 @@ fi
 
 echo "6) Limpeza e resumo..."
 apt autoremove -y
+
 echo
 echo "Instalação concluída."
 echo "Usuário criado: $NEWUSER"
@@ -122,13 +124,11 @@ echo "Lembre-se: faça login com 'ssh $NEWUSER@<IP>' e, se necessário, reinicie
 echo "Docker disponível (usuário $NEWUSER adicionado ao grupo 'docker')."
 if [ -n "${DOMAIN:-}" ]; then
   echo "Se o certificado foi emitido, Nginx já foi configurado para usar TLS."
+else
+  echo "Execute o script novamente com --domain your-domain.com para emitir TLS via Let's Encrypt."
 fi
-echo
-echo "Instalação concluída."
-echo "Diretório de instalação: $INSTALL_DIR"
-echo "Usuário criado/uso: $NEWUSER"
-if [ -n "$DOMAIN" ]; then
-  echo "Se o certificado foi emitido, o site está protegido por TLS."
+
+exit 0
 else
   echo "Execute o script novamente com um domínio para emitir TLS via Let's Encrypt."
 fi
