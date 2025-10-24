@@ -2,7 +2,7 @@
 Custom validators for ServiceHub.
 """
 
-from pydantic import BaseModel, field_validator, EmailStr
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from decimal import Decimal
 import re
@@ -12,7 +12,7 @@ class ClientValidator(BaseModel):
     """Validator for Client data."""
     
     name: str
-    email: EmailStr
+    email: str
     phone: str
     document: str
     type: str
@@ -23,6 +23,13 @@ class ClientValidator(BaseModel):
         if not v or len(v.strip()) < 3:
             raise ValueError('Nome deve ter pelo menos 3 caracteres')
         return v.strip()
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v or '.' not in v.split('@')[-1]:
+            raise ValueError('Email inválido')
+        return v.strip().lower()
     
     @field_validator('phone')
     @classmethod
@@ -111,7 +118,7 @@ class UserValidator(BaseModel):
     """Validator for User data."""
     
     username: str
-    email: EmailStr
+    email: str
     password: Optional[str] = None
     
     @field_validator('username')
@@ -122,6 +129,13 @@ class UserValidator(BaseModel):
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('Username pode conter apenas letras, números, hífen e underscore')
         return v.strip()
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v or '.' not in v.split('@')[-1]:
+            raise ValueError('Email inválido')
+        return v.strip().lower()
     
     @field_validator('password')
     @classmethod
