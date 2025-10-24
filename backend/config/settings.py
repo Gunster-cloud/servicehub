@@ -43,6 +43,7 @@ DJANGO_LOG_LEVEL = env("DJANGO_LOG_LEVEL")
 
 
 INSTALLED_APPS = [
+    "daphne",  # Must be before django.contrib.staticfiles
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -59,7 +60,6 @@ INSTALLED_APPS = [
     "django_extensions",
     "corsheaders",
     "channels",
-    "daphne",
     "django_celery_beat",
     "django_celery_results",
 
