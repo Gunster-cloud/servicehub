@@ -2,11 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import UserProfile
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
-    ChangePasswordSerializer, UserProfileSerializer
+    ChangePasswordSerializer, UserProfileSerializer,
+    AuthTokenObtainPairSerializer
 )
 
 User = get_user_model()
@@ -101,4 +104,47 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class AuthLoginView(TokenObtainPairView):
+    """Authenticate user and return JWT tokens along with user details."""
+
+    permission_classes = [AllowAny]
+    serializer_class = AuthTokenObtainPairSerializer
+
+
+class AuthRegisterView(APIView):
+    """Handle user registration requests."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = UserCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            UserSerializer(user).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+class AuthMeView(APIView):
+    """Return the currently authenticated user."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)
+
+
+class AuthLogoutView(APIView):
+    """Acknowledge logout requests so clients can clear their tokens."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        return Response(
+            {'detail': 'Logout realizado com sucesso.'},
+            status=status.HTTP_200_OK
+        )
 
