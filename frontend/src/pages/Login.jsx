@@ -2,8 +2,8 @@
  * Login Page
  */
 
-import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useContext, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -18,6 +18,7 @@ import { AuthContext } from '../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, error } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     email: '',
@@ -25,6 +26,14 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.registered) {
+      setSuccessMessage('Cadastro realizado com sucesso! Faça login para continuar.');
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -71,9 +80,15 @@ const Login = () => {
               Faça login para continuar
             </Typography>
 
+            {successMessage && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {successMessage}
+              </Alert>
+            )}
+
             {(error || localError) && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                {error?.message || localError}
+                {error?.detail || error?.message || localError}
               </Alert>
             )}
 
