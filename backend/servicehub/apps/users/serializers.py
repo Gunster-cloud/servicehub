@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from .models import UserProfile
 
@@ -62,9 +63,18 @@ class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
     new_password = serializers.CharField(write_only=True, min_length=8)
     new_password_confirm = serializers.CharField(write_only=True)
-    
+
     def validate(self, data):
         if data['new_password'] != data.pop('new_password_confirm'):
             raise serializers.ValidationError({'new_password': 'As senhas não coincidem.'})
+        return data
+
+
+class AuthTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """Custom serializer that attaches user details to the token response."""
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user'] = UserSerializer(self.user).data
         return data
 
